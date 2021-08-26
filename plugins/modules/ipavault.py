@@ -31,13 +31,9 @@ DOCUMENTATION = """
 module: ipavault
 short description: Manage vaults and secret vaults.
 description: Manage vaults and secret vaults. KRA service must be enabled.
+extends_documentation_fragment:
+  - ipamodule_base_docs
 options:
-  ipaadmin_principal:
-    description: The admin principal
-    default: admin
-  ipaadmin_password:
-    description: The admin password
-    required: false
   name:
     description: The vault name
     required: true
@@ -317,10 +313,8 @@ vault:
 
 import os
 from base64 import b64decode
-from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils._text import to_text
-from ansible.module_utils.ansible_freeipa_module import temp_kinit, \
-    temp_kdestroy, valid_creds, api_connect, api_command, \
+from ansible.module_utils.ansible_freeipa_module import IPAAnsibleModule, \
     gen_add_del_lists, compare_args_ipa, module_params_get, exit_raw_json, \
     ipalib_errors
 
@@ -338,7 +332,7 @@ def find_vault(module, name, username, service, shared):
     else:
         _args['shared'] = shared
 
-    _result = api_command(module, "vault_find", name, _args)
+    _result = module.ipa_command("vault_find", name, _args)
 
     if len(_result["result"]) > 1:
         module.fail_json(
@@ -579,7 +573,7 @@ def get_stored_data(module, res_find, args):
 
     # retrieve vault stored data
     try:
-        result = api_command(module, 'vault_retrieve', name, pwdargs)
+        result = module.ipa_command('vault_retrieve', name, pwdargs)
     except ipalib_errors.NotFound:
         return None
 
@@ -587,12 +581,9 @@ def get_stored_data(module, res_find, args):
 
 
 def main():
-    ansible_module = AnsibleModule(
+    ansible_module = IPAAnsibleModule(
         argument_spec=dict(
             # generalgroups
-            ipaadmin_principal=dict(type="str", default="admin"),
-            ipaadmin_password=dict(type="str", required=False, no_log=True),
-
             name=dict(type="list", aliases=["cn"], default=None,
                       required=True),
 
@@ -663,9 +654,6 @@ def main():
     ansible_module._ansible_debug = True
 
     # general
-    ipaadmin_principal = module_params_get(ansible_module,
-                                           "ipaadmin_principal")
-    ipaadmin_password = module_params_get(ansible_module, "ipaadmin_password")
     names = module_params_get(ansible_module, "name")
 
     # present
@@ -732,17 +720,10 @@ def main():
 
     changed = False
     exit_args = {}
-    ccache_dir = None
-    ccache_name = None
-    try:
-        if not valid_creds(ansible_module, ipaadmin_principal):
-            ccache_dir, ccache_name = temp_kinit(ipaadmin_principal,
-                                                 ipaadmin_password)
-            # Need to set krb5 ccache name, due to context='ansible-freeipa'
-            if ccache_name is not None:
-                os.environ["KRB5CCNAME"] = ccache_name
 
-        api_connect(context='ansible-freeipa')
+    with ansible_module.ipa_connect(context='ansible-freeipa') as ccache_name:
+        if ccache_name is not None:
+            os.environ["KRB5CCNAME"] = ccache_name
 
         commands = []
 
@@ -970,7 +951,7 @@ def main():
         errors = []
         for name, command, args in commands:
             try:
-                result = api_command(ansible_module, command, name, args)
+                result = ansible_module.ipa_command(command, name, args)
 
                 if command == 'vault_archive':
                     changed = 'Archived data into' in result['summary']
@@ -1011,12 +992,6 @@ def main():
                                 command, member_type, member, failure))
         if len(errors) > 0:
             ansible_module.fail_json(msg=", ".join(errors))
-
-    except Exception as exception:
-        ansible_module.fail_json(msg=str(exception))
-
-    finally:
-        temp_kdestroy(ccache_dir, ccache_name)
 
     # Done
 
