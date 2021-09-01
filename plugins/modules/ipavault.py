@@ -315,8 +315,7 @@ import os
 from base64 import b64decode
 from ansible.module_utils._text import to_text
 from ansible.module_utils.ansible_freeipa_module import IPAAnsibleModule, \
-    gen_add_del_lists, compare_args_ipa, module_params_get, exit_raw_json, \
-    ipalib_errors
+    gen_add_del_lists, compare_args_ipa, exit_raw_json, ipalib_errors
 
 
 def find_vault(module, name, username, service, shared):
@@ -654,42 +653,40 @@ def main():
     ansible_module._ansible_debug = True
 
     # general
-    names = module_params_get(ansible_module, "name")
+    names = ansible_module.params_get("name")
 
     # present
-    description = module_params_get(ansible_module, "description")
+    description = ansible_module.params_get("description")
 
-    username = module_params_get(ansible_module, "username")
-    service = module_params_get(ansible_module, "service")
-    shared = module_params_get(ansible_module, "shared")
+    username = ansible_module.params_get("username")
+    service = ansible_module.params_get("service")
+    shared = ansible_module.params_get("shared")
 
-    users = module_params_get(ansible_module, "users")
-    groups = module_params_get(ansible_module, "groups")
-    services = module_params_get(ansible_module, "services")
-    owners = module_params_get(ansible_module, "owners")
-    ownergroups = module_params_get(ansible_module, "ownergroups")
-    ownerservices = module_params_get(ansible_module, "ownerservices")
+    users = ansible_module.params_get("users")
+    groups = ansible_module.params_get("groups")
+    services = ansible_module.params_get("services")
+    owners = ansible_module.params_get("owners")
+    ownergroups = ansible_module.params_get("ownergroups")
+    ownerservices = ansible_module.params_get("ownerservices")
 
-    vault_type = module_params_get(ansible_module, "vault_type")
-    salt = module_params_get(ansible_module, "vault_salt")
-    password = module_params_get(ansible_module, "vault_password")
-    password_file = module_params_get(ansible_module, "vault_password_file")
-    new_password = module_params_get(ansible_module, "new_password")
-    new_password_file = module_params_get(ansible_module, "new_password_file")
-    public_key = module_params_get(ansible_module, "vault_public_key")
-    public_key_file = module_params_get(ansible_module,
-                                        "vault_public_key_file")
-    private_key = module_params_get(ansible_module, "vault_private_key")
-    private_key_file = module_params_get(ansible_module,
-                                         "vault_private_key_file")
+    vault_type = ansible_module.params_get("vault_type")
+    salt = ansible_module.params_get("vault_salt")
+    password = ansible_module.params_get("vault_password")
+    password_file = ansible_module.params_get("vault_password_file")
+    new_password = ansible_module.params_get("new_password")
+    new_password_file = ansible_module.params_get("new_password_file")
+    public_key = ansible_module.params_get("vault_public_key")
+    public_key_file = ansible_module.params_get("vault_public_key_file")
+    private_key = ansible_module.params_get("vault_private_key")
+    private_key_file = ansible_module.params_get("vault_private_key_file")
 
-    vault_data = module_params_get(ansible_module, "vault_data")
+    vault_data = ansible_module.params_get("vault_data")
 
-    datafile_in = module_params_get(ansible_module, "datafile_in")
-    datafile_out = module_params_get(ansible_module, "datafile_out")
+    datafile_in = ansible_module.params_get("datafile_in")
+    datafile_out = ansible_module.params_get("datafile_out")
 
-    action = module_params_get(ansible_module, "action")
-    state = module_params_get(ansible_module, "state")
+    action = ansible_module.params_get("action")
+    state = ansible_module.params_get("state")
 
     # Check parameters
 
