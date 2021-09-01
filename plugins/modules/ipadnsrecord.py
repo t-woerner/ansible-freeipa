@@ -1126,8 +1126,6 @@ def configure_module():
         supports_check_mode=True,
     )
 
-    ansible_module._ansible_debug = True
-
     return ansible_module
 
 

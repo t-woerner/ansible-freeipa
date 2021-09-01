@@ -182,8 +182,6 @@ def main():
        )
     )
 
-    ansible_module._ansible_debug = True
-
     # dnsconfig
     forwarders = ansible_module.params_get('forwarders') or []
     forward_policy = ansible_module.params_get('forward_policy')

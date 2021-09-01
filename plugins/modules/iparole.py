@@ -428,8 +428,6 @@ def create_module():
         required_one_of=[]
     )
 
-    ansible_module._ansible_debug = True  # pylint: disable=protected-access
-
     return ansible_module
 
 

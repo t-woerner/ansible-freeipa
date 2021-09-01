@@ -621,6 +621,8 @@ else:
             # pylint: disable=super-with-arguments
             super(IPAAnsibleModule, self).__init__(*args, **kwargs)
 
+            self._ansible_debug = True
+
             # ipaadmin vars
             self.ipaadmin_principal = self.params_get("ipaadmin_principal")
             self.ipaadmin_password = self.params_get("ipaadmin_password")

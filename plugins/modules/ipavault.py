@@ -650,8 +650,6 @@ def main():
                             ['vault_public_key', 'vault_public_key_file']],
     )
 
-    ansible_module._ansible_debug = True
-
     # general
     names = ansible_module.params_get("name")
 

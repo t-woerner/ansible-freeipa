@@ -188,8 +188,6 @@ def main():
         supports_check_mode=True,
     )
 
-    ansible_module._ansible_debug = True
-
     # Get parameters
     names = ansible_module.params_get("name")
     action = ansible_module.params_get("action")

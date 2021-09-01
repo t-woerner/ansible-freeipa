@@ -207,8 +207,6 @@ def main():
         supports_check_mode=True
     )
 
-    ansible_module._ansible_debug = True
-
     # general
     realm = ansible_module.params_get("realm")
 
