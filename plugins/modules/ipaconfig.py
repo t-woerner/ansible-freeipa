@@ -34,13 +34,9 @@ author: chris procter
 short_description: Modify IPA global config options
 description:
 - Modify IPA global config options
+extends_documentation_fragment:
+  - ipamodule_base_docs
 options:
-    ipaadmin_principal:
-        description: The admin principal
-        default: admin
-    ipaadmin_password:
-        description: The admin password
-        required: false
     maxusername:
         description: Set the maximum username length between 1-255
         required: false
@@ -250,31 +246,17 @@ config:
         returned: always
 '''
 
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ansible_freeipa_module import temp_kinit, \
-    temp_kdestroy, valid_creds, api_connect, api_command_no_name, \
-    compare_args_ipa, module_params_get, ipalib_errors
-
-
-def config_show(module):
-    _result = api_command_no_name(module, "config_show", {})
-
-    return _result["result"]
-
-
-def gen_args(params):
-    _args = {k: v for k, v in params.items() if v is not None}
-
-    return _args
+from ansible.module_utils.ansible_freeipa_module import (
+    IPAAnsibleModule, compare_args_ipa, ipalib_errors
+)
 
 
 def main():
-    ansible_module = AnsibleModule(
+    ansible_module = IPAAnsibleModule(
         argument_spec=dict(
             # general
-            ipaadmin_principal=dict(type="str", default="admin"),
-            ipaadmin_password=dict(type="str", required=False, no_log=True),
+            # ipaadmin_principal=dict(type="str", default="admin"),
+            # ipaadmin_password=dict(type="str", required=False, no_log=True),
             maxusername=dict(type="int", required=False,
                              aliases=['ipamaxusernamelength']),
             maxhostname=dict(type="int", required=False,
@@ -333,12 +315,6 @@ def main():
 
     # Get parameters
 
-    # general
-    ipaadmin_principal = module_params_get(ansible_module,
-                                           "ipaadmin_principal")
-    ipaadmin_password = module_params_get(ansible_module,
-                                          "ipaadmin_password")
-
     field_map = {
         "maxusername": "ipamaxusernamelength",
         "maxhostname": "ipamaxhostnamelength",
@@ -366,7 +342,7 @@ def main():
 
     params = {}
     for x in field_map:
-        val = module_params_get(ansible_module, x)
+        val = ansible_module.params_get(x)
 
         if val is not None:
             params[field_map.get(x, x)] = val
@@ -407,29 +383,25 @@ def main():
 
     changed = False
     exit_args = {}
-    ccache_dir = None
-    ccache_name = None
-    res_show = None
-    try:
-        if not valid_creds(ansible_module, ipaadmin_principal):
-            ccache_dir, ccache_name = temp_kinit(ipaadmin_principal,
-                                                 ipaadmin_password)
-        api_connect()
+    with ansible_module.ipa_connect():
+        result = ansible_module.ipa_command_no_name("config_show", {})
+        result = result.get("result", {})
+        params = {
+            k: v for k, v in (params or {}).items()
+            if k not in result or result[k] != v
+        }
         if params:
-            res_show = config_show(ansible_module)
-            params = {
-                k: v for k, v in params.items()
-                if k not in res_show or res_show[k] != v
-            }
-            if params \
-               and not compare_args_ipa(ansible_module, params, res_show):
+            if not compare_args_ipa(ansible_module, params, result):
                 changed = True
                 if not ansible_module.check_mode:
-                    api_command_no_name(ansible_module, "config_mod", params)
+                    try:
+                        ansible_module.ipa_command_no_name(
+                            "config_mod", params
+                        )
+                    except ipalib_errors.EmptyModlist:
+                        changed = False
 
         else:
-            rawresult = api_command_no_name(ansible_module, "config_show", {})
-            result = rawresult['result']
             del result['dn']
             for key, value in result.items():
                 k = reverse_field_map.get(key, key)
@@ -460,13 +432,6 @@ def main():
                         exit_args[k] = (value[0] == "TRUE")
                     else:
                         exit_args[k] = value
-    except ipalib_errors.EmptyModlist:
-        changed = False
-    except Exception as e:
-        ansible_module.fail_json(msg="%s %s" % (params, str(e)))
-
-    finally:
-        temp_kdestroy(ccache_dir, ccache_name)
 
     # Done
     ansible_module.exit_json(changed=changed, config=exit_args)
