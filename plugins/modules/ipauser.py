@@ -384,6 +384,9 @@ options:
     default: "always"
     choices: ["always", "on_create"]
     required: false
+  fetch_param:
+    description: The fields to fetch with state=fetched
+    required: false
   action:
     description: Work on user or member level
     default: "user"
@@ -393,7 +396,8 @@ options:
     default: present
     choices: ["present", "absent",
               "enabled", "disabled",
-              "unlocked", "undeleted"]
+              "unlocked", "undeleted",
+              "fetched"]
 author:
     - Thomas Woerner
 """
@@ -481,7 +485,7 @@ if six.PY3:
     unicode = str
 
 
-def find_user(module, name):
+def user_show(module, name):
     _args = {
         "all": True,
     }
@@ -498,6 +502,59 @@ def find_user(module, name):
     _result["usercertificate"] = [
         encode_certificate(x) for x in (_result.get("usercertificate") or [])
     ]
+    return _result
+
+
+def simplify_result(res):
+    # Transform each principal to a string
+    if "krbprincipalname" in res:
+        res["krbprincipalname"] = [
+            to_text(x) for x in (res.get("krbprincipalname") or [])
+        ]
+    # Transform each certificate to a string
+    if "usercertificate" in res:
+        res["usercertificate"] = [
+            encode_certificate(x) for x in
+            (res.get("usercertificate") or [])
+        ]
+    # All single value parameters should not be lists
+    for param in res:
+        if isinstance(res[param], list) and len(res[param]) == 1 and \
+           param not in ["manager", "krbprincipalname", "usercertificate",
+                         "ipacertmapdata"]:
+            res[param] = res[param][0]
+        if param in []:
+            res[param] = int(res[param])
+
+
+def user_show_simplified(module, name):
+    _args = {
+        "all": True,
+    }
+
+    try:
+        _result = module.ipa_command("user_show", name, _args).get("result")
+    except ipalib_errors.NotFound:
+        return None
+
+    simplify_result(_result)
+
+    return _result
+
+
+def user_find(module):
+    _args = {
+        "all": True,
+    }
+
+    try:
+        _result = module.ipa_command_no_name("user_find", _args).get("result")
+    except ipalib_errors.NotFound:
+        return None
+
+    for res in _result:
+        simplify_result(res)
+
     return _result
 
 
@@ -617,6 +674,15 @@ def check_parameters(  # pylint: disable=unused-argument
             invalid.extend(["principal", "manager",
                             "certificate", "certmapdata",
                             ])
+
+        if state == "fetched":
+            invalid.append("users")
+
+            if action == "member":
+                module.fail_json(
+                    msg="Fetched is not possible with action=member")
+        else:
+            invalid.append("fetch_param")
 
         if state != "absent" and preserve is not None:
             module.fail_json(
@@ -809,6 +875,51 @@ def main():
         nomembers=dict(type='bool', default=None),
     )
 
+    ipa_param_mapping = {
+        "first": "givenname",
+        "last": "sn",
+        "fullname": "cn",
+        "displayname": "displayname",
+        "initials": "initials",
+        "homedir": "homedirectory",
+        "shell": "loginshell",
+        "email": "mail",
+        "principalexpiration": "krbprincipalexpiration",
+        "passwordexpiration": "krbpasswordexpiration",
+        # "password": "userpassword", Never return passwords
+        # "randompassword": "randompassword", Never return passwords
+        "uid": "uidnumber",
+        "gid": "gidnumber",
+        "city": "l",
+        "userstate": "st",
+        "postalcode": "postalcode",
+        "phone": "telephonenumber",
+        "mobile": "mobile",
+        "pager": "pager",
+        "fax": "facsimiletelephonenumber",
+        "orgunit": "ou",
+        "title": "title",
+        "carlicense": "carlicense",
+        "sshpubkey": "ipasshpubkey",
+        "userauthtype": "ipauserauthtype",
+        "userclass": "userclass",
+        "radius": "ipatokenradiusconfiglink",
+        "radiususer": "ipatokenradiususername",
+        "departmentnumber": "departmentnumber",
+        "employeenumber": "employeenumber",
+        "employeetype": "employeetype",
+        "preferredlanguage": "preferredlanguage",
+        "manager": "manager",
+        "principal": "krbprincipalname",
+        "certificate": "usercertificate",
+        "certmapdata": "ipacertmapdata",
+    }
+
+    ipa_param_converter = {
+        "uid": int,
+        "gid": int,
+    }
+
     ansible_module = IPAAnsibleModule(
         argument_spec=dict(
             # general
@@ -833,18 +944,24 @@ def main():
             update_password=dict(type='str', default=None, no_log=False,
                                  choices=['always', 'on_create']),
 
+            # fetched
+            fetch_param=dict(type="list", default=None,
+                             choices=["all"].extend(ipa_param_mapping.keys()),
+                             required=False),
+
             # general
             action=dict(type="str", default="user",
                         choices=["member", "user"]),
             state=dict(type="str", default="present",
                        choices=["present", "absent", "enabled", "disabled",
-                                "unlocked", "undeleted"]),
+                                "unlocked", "undeleted", "fetched"]),
 
             # Add user specific parameters for simple use case
             **user_spec
         ),
         mutually_exclusive=[["name", "users"]],
-        required_one_of=[["name", "users"]],
+        # Required one of [["name", "users"]] has been removed as there is
+        # an extra test below and it is not working with state=fetched
         supports_check_mode=True,
     )
 
@@ -909,15 +1026,18 @@ def main():
     preserve = ansible_module.params_get("preserve")
     # mod
     update_password = ansible_module.params_get("update_password")
+    # fetched
+    fetch_param = ansible_module.params_get("fetch_param")
     # general
     action = ansible_module.params_get("action")
     state = ansible_module.params_get("state")
 
     # Check parameters
 
-    if (names is None or len(names) < 1) and \
-       (users is None or len(users) < 1):
-        ansible_module.fail_json(msg="One of name and users is required")
+    if state != "fetched":
+        if (names is None or len(names) < 1) and \
+           (users is None or len(users) < 1):
+            ansible_module.fail_json(msg="One of name and users is required")
 
     if state == "present":
         if names is not None and len(names) != 1:
@@ -964,6 +1084,13 @@ def main():
 
         commands = []
         user_set = set()
+
+        if state == "fetched":
+            changed = ansible_module.execute_fetched(
+                exit_args, names, "users", "uid", fetch_param,
+                ipa_param_mapping, ipa_param_converter, user_show_simplified,
+                user_find)
+            ansible_module.exit_json(changed=False, user=exit_args)
 
         for user in names:
             if isinstance(user, dict):
@@ -1074,7 +1201,7 @@ def main():
                     "your IPA version")
 
             # Make sure user exists
-            res_find = find_user(ansible_module, name)
+            res_find = user_show(ansible_module, name)
 
             # Create command
             if state == "present":
@@ -1141,7 +1268,7 @@ def main():
                         principal_add, principal_del = gen_add_del_lists(
                             principal, res_find.get("krbprincipalname"))
                         # Principals are not returned as utf8 for IPA using
-                        # python2 using user_find, therefore we need to
+                        # python2 using user_show, therefore we need to
                         # convert the principals that we should remove.
                         principal_del = [to_text(x) for x in principal_del]
 

@@ -1166,6 +1166,101 @@ else:
 
             return changed
 
+        def execute_fetched(self, exit_args, names, prefix, name_ipa_param,
+                            fetch_params, ipa_param_mapping,
+                            ipa_param_converter,
+                            show_function, find_function):
+            """
+            Execute fetched state.
+
+            Parameters
+            ----------
+            exit_args: Exit args dict
+                This is the dict that will be resturned with
+                ansible_module.exit_json
+            names: The main items to return
+                It names is not None and not an empty list then all items
+                found with "item_find" are returned, else the items in names.
+            prefix: The prefix for use with several main items
+                The prefix is "users" for the "user" module. It is used
+                if only the list of main items (example: users) is returned.
+            name_ipa_param: The IPA param name of the name parameter
+                This is for example "uid" that is used for the user name in
+                the user module.
+            fetch_params: The parameters to return
+                The parameters that should be returned. If fetch_params is
+                ["all"], all parameters in ipa_pram_names will be returned.
+            ipa_param_mapping: IPA param mapping
+                This is the mapping of the default module paramter name to
+                IPA option name.
+                Example: "uid" for user name of the user commands.
+            ipa_param_converter: Parameter converter
+                This is an extra parameter converter for parameters that
+                need to be converted into integers for example.
+            show_function: The function to show one entry
+                This is "user-show" for the user command.
+            find_function: The function to find several entries
+                This is "user-find" for the user command.
+
+            Example (ipauser module):
+
+            if state == "fetched":
+                changed = ansible_module.execute_fetched(
+                    exit_args, "users", "uid", fetch_params, ipa_param_mapping,
+                    names, user_show, user_find)
+                ansible_module.exit_json(changed=False, user=exit_args)
+
+            """
+
+            def store_params(exit_args, name, prefix, name_ipa_param, result,
+                             params, ipa_param_converter):
+                if params is None:
+                    exit_args.setdefault(prefix, []).append(
+                        result[name_ipa_param])
+                    return
+                for field in params:
+                    ipa_field = ipa_param_mapping[field]
+
+                    if ipa_field in result:
+                        value = result[ipa_field]
+                        if ipa_param_converter and \
+                           field in ipa_param_converter:
+                            if isinstance(value, list):
+                                value = [ipa_param_converter[field](val)
+                                         for val in value]
+                            else:
+                                value = ipa_param_converter[field](value)
+                        else:
+                            if isinstance(value, list):
+                                value = [to_text(val) for val in value]
+                            else:
+                                value = to_text(value)
+                        if name is None:
+                            exit_args[field] = value
+                        else:
+                            exit_args.setdefault(name, {})[field] = value
+
+            if fetch_params == ["all"]:
+                fetch_params = ipa_param_mapping.keys()
+
+            if names and isinstance(names, list):
+                with_name = len(names) > 1
+                for name in names:
+                    result = show_function(self, name)
+                    if result:
+                        store_params(exit_args, name if with_name else None,
+                                     prefix, name_ipa_param, result,
+                                     fetch_params, ipa_param_converter)
+            else:
+                results = find_function(self)
+                if results is not None:
+                    for result in results:
+                        name = result[name_ipa_param]
+                        store_params(exit_args, name, prefix, name_ipa_param,
+                                     result, fetch_params, ipa_param_converter)
+
+            return False
+
     class FreeIPABaseModule(IPAAnsibleModule):
         """
         Base class for FreeIPA Ansible modules.
