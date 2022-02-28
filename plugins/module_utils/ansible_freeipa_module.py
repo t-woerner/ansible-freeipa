@@ -1166,6 +1166,123 @@ else:
 
             return changed
 
+        def fetch_objects(
+            self, object_type, object_key, ipa_param_mapping,
+            obj_filter=None, encoding_fn=None, sizelimit=None, timelimit=None
+        ):
+            """
+            Fetch objects using IPA API *_find calls.
+
+            Parameters
+            ----------
+            object_type: string
+                The IPA object to search (e.g.: "user", "automember").
+            object_key: list
+                The IPA attribute name that uniquely identify the object.
+            ipa_param_mapping: dict
+                A mapping of <playbook param>:<ipa attribute>. It must also
+                include the 'object_key' keys mapping (e.g. 'name': 'uid' for
+                users).
+            obj_filter: function
+                An optional predicate function that evaluates to True if the
+                object is to be added to the result set.
+            encoding_fn: dict
+                An optional mapping <ipa attribute>: <encoding function>. The
+                encoding function will be applied to the 'ipa attribute', if a
+                function is not provided a 'best guess' one will be used
+                (either the buitin for the defined data type, or 'to_text').
+            sizelimit: int
+                Optionally set the size limit for the IPA API query.
+            timelimit: int
+                Optionally set the time limit for the IPA API query.
+
+            """
+            self.warn("Fetching objects might be limited by 'sizelimit'.")
+            self.warn("Fetching objects might fail due to 'timelimit'.")
+
+            if not isinstance(object_key, (list, tuple)):
+                object_key = [object_key]
+            if not obj_filter:
+                obj_filter = bool
+            fetch_params = self.params_get("fetch_param") or []
+            param_ipa_map = {v: k for k, v in ipa_param_mapping.items()}
+            encoding_fn = encoding_fn or {}
+
+            # retrieve all objects.
+            try:
+                _args = {"all": True}
+                if sizelimit is not None:
+                    _args["sizelimit"] = sizelimit
+                if timelimit is not None:
+                    _args["timelimit"] = timelimit
+                _result = self.ipa_command_no_name(
+                    "%s_find" % object_type, _args
+                )
+            except ipalib_errors.NotFound:
+                return []
+            else:
+                _result = _result.get("result")
+
+            # Filter objects to be returned.
+            _result = [res for res in _result if obj_filter(res)]
+
+            for res in _result:
+                # All single value parameters should not be lists
+                for param in res:
+                    mod_arg = param_ipa_map.get(param)
+                    arg_desc = self.argument_spec.get(mod_arg)
+                    # Mark params that will not be returned.
+                    if (
+                        mod_arg not in object_key
+                        and "all" not in fetch_params
+                        and mod_arg not in fetch_params
+                        and (arg_desc is None or arg_desc.get("no_log"))
+                    ):
+                        res[param] = None
+                        continue
+                    # Format data to be returned.
+                    # Apply encoding function to parameters
+                    encode = encoding_fn.get(param)
+                    # if encode function is not set, apply the builtin
+                    # conversion for the specified data type.
+                    if not encode:
+                        param_type = (arg_desc or {}).get("type", "str")
+                        arg_type = getattr(sys.modules["builtins"], param_type)
+                        if (
+                            param_type in ("list", "tuple", "str")
+                            or not arg_type
+                        ):
+                            encode = to_text
+                        else:
+                            encode = arg_type
+
+                    if not isinstance(res[param], (list, tuple)):
+                        res[param] = [res[param]]
+                    # Apply data encoding
+                    res[param] = [encode(x) for x in res[param]]
+                    # Return only actual object if list has a single element.
+                    if len(res[param]) == 1:
+                        res[param] = res[param][0]
+
+            # Return object data, if requested.
+            if fetch_params:
+                return [
+                    {
+                        param_ipa_map[k]: v
+                        for k, v in res.items()
+                        if v is not None and k in param_ipa_map
+                    }
+                    for res in _result
+                ]
+            # Otherwise, return the object "keys"
+            # If object key is compound, each object is returend as a dict.
+            return [
+                res[ipa_param_mapping[object_key[0]]]
+                if len(object_key) == 1
+                else {k: res[ipa_param_mapping[k]] for k in object_key}
+                for res in _result
+            ]
+
         def execute_fetched(self, exit_args, names, prefix, name_ipa_param,
                             fetch_params, ipa_param_mapping,
                             ipa_param_converter,
