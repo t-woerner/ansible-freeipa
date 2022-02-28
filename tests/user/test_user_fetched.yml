@@ -4,15 +4,7 @@
   become: true
 
   tasks:
-  - name: Users user1 and user2 absent
-    ipauser:
-      ipaadmin_password: SomeADMINpassword
-      name:
-      - user1
-      - user2
-      state: absent
-
-
+  # setup
   - name: Users user1 and user2 present
     ipauser:
       ipaadmin_password: SomeADMINpassword
@@ -24,12 +16,23 @@
         first: first2
         last: last2
 
+  # tests
+  - name: Fetch user list
+    ipauser:
+      ipaadmin_password: SomeADMINpassword
+      state: fetched
+    register: result
+    failed_when: result.changed or result.failed
 
-  - name: Fetch user information
+  - name: Print fetched information
+    debug:
+      var: result
+
+  - name: Fetch user user1 information
     ipauser:
       ipaadmin_password: SomeADMINpassword
       name:
-      - user100
+      - user1
       fetch_param: all
       state: fetched
     register: result
@@ -39,20 +42,7 @@
     debug:
       var: result
 
-
-  - name: Fetch user information
-    ipauser:
-      ipaadmin_password: SomeADMINpassword
-      state: fetched
-    register: result
-    failed_when: result.changed or result.failed
-
-  - name: Print fetched information
-    debug:
-      var: result
-
-
-  - name: Fetch user information
+  - name: Fetch users information
     ipauser:
       ipaadmin_password: SomeADMINpassword
       name:
@@ -67,23 +57,7 @@
     debug:
       var: result
 
-
-  - name: Fetch user information
-    ipauser:
-      ipaadmin_password: SomeADMINpassword
-      name:
-      - user1
-      fetch_param: all
-      state: fetched
-    register: result
-    failed_when: result.changed or result.failed
-
-  - name: Print fetched information
-    debug:
-      var: result
-
-
-  - name: Fetch user information
+  - name: Fetch user information for given parameters
     ipauser:
       ipaadmin_password: SomeADMINpassword
       fetch_param:
@@ -98,7 +72,25 @@
     debug:
       var: result
 
+  - name: Fetch user information for given parameters for selected users
+    ipauser:
+      ipaadmin_password: SomeADMINpassword
+      name:
+      - user1
+      - user100
+      fetch_param:
+      - uid
+      - first
+      - last
+      state: fetched
+    register: result
+    failed_when: result.changed or result.failed
 
+  - name: Print fetched information
+    debug:
+      var: result
+
+  # cleanup
   - name: Users user1 and user2 absent
     ipauser:
       ipaadmin_password: SomeADMINpassword

@@ -1,0 +1,112 @@
+---
+- name: Test ipaservice fetch
+  hosts: ipaserver
+  become: true
+
+  tasks:
+  - include_tasks: ../env_freeipa_facts.yml
+
+  - when: ipa_version is version('4.7.0', '>=')
+    block:
+      # SETUP
+      - name: Generate self-signed certificates.
+        shell:
+          cmd: |
+            openssl req -x509 -newkey rsa:2048 -days 365 -nodes -keyout "private{{ item }}.key" -out "cert{{ item }}.pem" -subj '/CN=test'
+            openssl x509 -outform der -in "cert{{ item }}.pem" -out "cert{{ item }}.der"
+            base64 "cert{{ item }}.der" -w5000 > "cert{{ item }}.b64"
+        with_items: [1, 2]
+        become: no
+        delegate_to: localhost
+
+      - name: Setup test environment
+        include_tasks: env_setup.yml
+
+      - name: Ensure service is present
+        ipaservice:
+          ipaadmin_password: SomeADMINpassword
+          ipaapi_context: "{{ ipa_context | default(omit) }}"
+          name: "HTTP/{{ svc_fqdn }}"
+          pac_type:
+            - MS-PAC
+            - PAD
+          auth_ind: otp
+          skip_host_check: no
+          force: yes
+          requires_pre_auth: yes
+          ok_as_delegate: no
+          ok_to_auth_as_delegate: no
+          certificate:
+            - "{{ lookup('file', 'cert1.b64') }}"
+        register: result
+        failed_when: not result.changed or result.failed
+
+      # TESTS
+      - name: Fetch service information
+        ipaservice:
+          ipaadmin_password: SomeADMINpassword
+          name:
+          - DNS/fedsrv.ipa.test
+          fetch_param: all
+          state: fetched
+        register: result
+        failed_when: result.changed or result.failed
+
+      - name: Print fetched information
+        debug:
+          var: result
+
+      - name: Fetch service information
+        ipaservice:
+          ipaadmin_password: SomeADMINpassword
+          fetch_param:
+            - host
+            - principal
+          state: fetched
+        register: result
+        failed_when: result.changed or result.failed
+
+      - name: Print fetched information
+        debug:
+          var: result
+
+      - name: Fetch service information
+        ipaservice:
+          ipaadmin_password: SomeADMINpassword
+          state: fetched
+        register: result
+        failed_when: result.changed or result.failed
+
+      - name: Print fetched information
+        debug:
+          var: result
+
+      - name: Fetch service information
+        ipaservice:
+          ipaadmin_password: SomeADMINpassword
+          name:
+          - DNS/fedsrv.ipa.test
+          - http/fedsrv.ipa.test
+          - mysvc/fedsrv.ipa.test
+          fetch_param: all
+          state: fetched
+        register: result
+        failed_when: result.changed or result.failed
+
+      - name: Print fetched information
+        debug:
+          var: result
+
+    always:
+      # CLEANUP
+      - name: Cleanup test environment
+        include_tasks: env_cleanup.yml
+
+      - name: Remove certificate files.
+        shell:
+          cmd: rm -f "private{{ item }}.key" "cert{{ item }}.pem" "cert{{ item }}.der" "cert{{ item }}.b64"
+        with_items: [1, 2]
+        become: no
+        delegate_to: localhost
+        args:
+          warn: no  # suppres warning for not using the `file` module.

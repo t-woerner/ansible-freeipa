@@ -148,6 +148,9 @@ options:
     required: false
     default: True
     type: bool
+  fetch_param:
+    description: The fields to fetch with state=fetched
+    required: false
   action:
     description: Work on service or member level
     default: service
@@ -155,7 +158,7 @@ options:
   state:
     description: State to ensure
     default: present
-    choices: ["present", "absent", "disabled"]
+    choices: ["present", "absent", "disabled", "fetched"]
 author:
     - Rafael Jeffman
 """
@@ -303,7 +306,12 @@ def check_parameters(module, state, action, names):
          'allow_retrieve_keytab_group', 'allow_retrieve_keytab_host',
          'allow_retrieve_keytab_hostgroup']
 
-    if state == 'present':
+    if state == 'fetched':
+        if action != 'service':
+            module.fail_json(msg="Can only fetch if action is 'service'.")
+        invalid = ['delete_continue']
+
+    elif state == 'present':
         if len(names) != 1:
             module.fail_json(msg="Only one service can be added at a time.")
 
@@ -347,7 +355,7 @@ def init_ansible_module():
         argument_spec=dict(
             # general
             name=dict(type="list", aliases=["service"], default=None,
-                      required=True),
+                      required=False),
             # service attributesstr
             certificate=dict(type="list", aliases=['usercertificate'],
                              default=None, required=False),
@@ -392,6 +400,11 @@ def init_ansible_module():
             allow_retrieve_keytab_hostgroup=dict(
                 type="list", required=False,
                 aliases=['ipaallowedtoperform_read_keys_hostgroup']),
+            # fetched
+            fetch_param=dict(type="list", default=None,
+                             choices=["all"].extend(ipa_param_mapping.keys()),
+                             required=False),
+            # absent
             delete_continue=dict(type="bool", required=False,
                                  aliases=['continue']),
             # action
@@ -399,7 +412,7 @@ def init_ansible_module():
                         choices=["member", "service"]),
             # state
             state=dict(type="str", default="present",
-                       choices=["present", "absent", "disabled"]),
+                       choices=["present", "absent", "disabled", "fetched"]),
         ),
         supports_check_mode=True,
     )
@@ -407,6 +420,20 @@ def init_ansible_module():
     ansible_module._ansible_debug = True
 
     return ansible_module
+
+
+ipa_param_mapping = {
+    "principal": "krbprincipalname",
+    "certificate": "usercertificate",
+    "pac_type": "ipakrbauthzdata",
+    "auth_ind": "krbprincipalauthind",
+    "requires_pre_auth": "ipakrbrequirespreauth",
+    "ok_as_delegate": "ipakrbokasdelegate",
+    "ok_to_auth_as_delegate": "ipakrboktoauthasdelegate",
+    "netbiosname": "ipantflatname",
+    "host": "managedby_host",
+    "service": "krbcanonicalname",
+}
 
 
 def main():
@@ -460,6 +487,35 @@ def main():
 
         commands = []
         keytab_members = ["user", "group", "host", "hostgroup"]
+
+        if state == "fetched":
+            encoding_fn = {
+                "usercertificate": encode_certificate
+            }
+            # set filter based on "name"
+            if names:
+                names = [
+                    p.lower() if "@" in p
+                    else "%s@%s".lower() % (p.lower(), api_get_realm().lower())
+                    for p in names
+                ]
+
+            def object_filter(res):
+                return any(
+                    (
+                        to_text(svc).lower().startswith(n)
+                        for svc in res["krbcanonicalname"] for n in names
+                    )
+                )
+
+            # fetch objects
+            fetched = ansible_module.fetch_objects(
+                "service", ["service"], ipa_param_mapping,
+                object_filter, encoding_fn=encoding_fn
+            )
+            exit_args["services"] = fetched
+            ansible_module.exit_json(changed=False, service=exit_args)
+            names = []
 
         for name in names:
             res_find = find_service(ansible_module, name)

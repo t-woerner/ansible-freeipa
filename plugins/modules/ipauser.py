@@ -485,7 +485,7 @@ if six.PY3:
     unicode = str
 
 
-def user_show(module, name):
+def find_user(module, name):
     _args = {
         "all": True,
     }
@@ -808,6 +808,49 @@ def exception_handler(module, ex, errors, exit_args, one_name):
     return False
 
 
+# ARGH: Globals...
+ipa_param_mapping = {
+    "login": "uid",
+    "first": "givenname",
+    "last": "sn",
+    "fullname": "cn",
+    "displayname": "displayname",
+    "initials": "initials",
+    "homedir": "homedirectory",
+    "shell": "loginshell",
+    "email": "mail",
+    "principalexpiration": "krbprincipalexpiration",
+    "passwordexpiration": "krbpasswordexpiration",
+    # "password": "userpassword", Never return passwords
+    # "randompassword": "randompassword", Never return passwords
+    "uid": "uidnumber",
+    "gid": "gidnumber",
+    "city": "l",
+    "userstate": "st",
+    "postalcode": "postalcode",
+    "phone": "telephonenumber",
+    "mobile": "mobile",
+    "pager": "pager",
+    "fax": "facsimiletelephonenumber",
+    "orgunit": "ou",
+    "title": "title",
+    "carlicense": "carlicense",
+    "sshpubkey": "ipasshpubkey",
+    "userauthtype": "ipauserauthtype",
+    "userclass": "userclass",
+    "radius": "ipatokenradiusconfiglink",
+    "radiususer": "ipatokenradiususername",
+    "departmentnumber": "departmentnumber",
+    "employeenumber": "employeenumber",
+    "employeetype": "employeetype",
+    "preferredlanguage": "preferredlanguage",
+    "manager": "manager",
+    "principal": "krbprincipalname",
+    "certificate": "usercertificate",
+    "certmapdata": "ipacertmapdata",
+}
+
+
 def main():
     user_spec = dict(
         # present
@@ -874,51 +917,6 @@ def main():
         noprivate=dict(type='bool', default=None),
         nomembers=dict(type='bool', default=None),
     )
-
-    ipa_param_mapping = {
-        "first": "givenname",
-        "last": "sn",
-        "fullname": "cn",
-        "displayname": "displayname",
-        "initials": "initials",
-        "homedir": "homedirectory",
-        "shell": "loginshell",
-        "email": "mail",
-        "principalexpiration": "krbprincipalexpiration",
-        "passwordexpiration": "krbpasswordexpiration",
-        # "password": "userpassword", Never return passwords
-        # "randompassword": "randompassword", Never return passwords
-        "uid": "uidnumber",
-        "gid": "gidnumber",
-        "city": "l",
-        "userstate": "st",
-        "postalcode": "postalcode",
-        "phone": "telephonenumber",
-        "mobile": "mobile",
-        "pager": "pager",
-        "fax": "facsimiletelephonenumber",
-        "orgunit": "ou",
-        "title": "title",
-        "carlicense": "carlicense",
-        "sshpubkey": "ipasshpubkey",
-        "userauthtype": "ipauserauthtype",
-        "userclass": "userclass",
-        "radius": "ipatokenradiusconfiglink",
-        "radiususer": "ipatokenradiususername",
-        "departmentnumber": "departmentnumber",
-        "employeenumber": "employeenumber",
-        "employeetype": "employeetype",
-        "preferredlanguage": "preferredlanguage",
-        "manager": "manager",
-        "principal": "krbprincipalname",
-        "certificate": "usercertificate",
-        "certmapdata": "ipacertmapdata",
-    }
-
-    ipa_param_converter = {
-        "uid": int,
-        "gid": int,
-    }
 
     ansible_module = IPAAnsibleModule(
         argument_spec=dict(
@@ -1026,8 +1024,6 @@ def main():
     preserve = ansible_module.params_get("preserve")
     # mod
     update_password = ansible_module.params_get("update_password")
-    # fetched
-    fetch_param = ansible_module.params_get("fetch_param")
     # general
     action = ansible_module.params_get("action")
     state = ansible_module.params_get("state")
@@ -1086,10 +1082,14 @@ def main():
         user_set = set()
 
         if state == "fetched":
-            changed = ansible_module.execute_fetched(
-                exit_args, names, "users", "uid", fetch_param,
-                ipa_param_mapping, ipa_param_converter, user_show_simplified,
-                user_find)
+            encoding_fn = {
+                "usercertificate": encode_certificate
+            }
+            exit_args["users"] = ansible_module.fetch_objects(
+                "user", ["login"], ipa_param_mapping,
+                lambda r: r["uid"][0] in names if names else True,
+                encoding_fn=encoding_fn
+            )
             ansible_module.exit_json(changed=False, user=exit_args)
 
         for user in names:
@@ -1201,7 +1201,7 @@ def main():
                     "your IPA version")
 
             # Make sure user exists
-            res_find = user_show(ansible_module, name)
+            res_find = find_user(ansible_module, name)
 
             # Create command
             if state == "present":
@@ -1268,7 +1268,7 @@ def main():
                         principal_add, principal_del = gen_add_del_lists(
                             principal, res_find.get("krbprincipalname"))
                         # Principals are not returned as utf8 for IPA using
-                        # python2 using user_show, therefore we need to
+                        # python2 using find_user, therefore we need to
                         # convert the principals that we should remove.
                         principal_del = [to_text(x) for x in principal_del]
 
