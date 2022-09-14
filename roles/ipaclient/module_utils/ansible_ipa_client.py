@@ -46,17 +46,78 @@ __all__ = ["gssapi", "version", "ipadiscovery", "api", "errors", "x509",
            "configure_nslcd_conf", "configure_ssh_config",
            "configure_sshd_config", "configure_automount",
            "configure_firefox", "sync_time", "check_ldap_conf",
-           "sssd_enable_ifp", "getargspec"]
+           "sssd_enable_ifp", "getargspec", "paths", "options", "NUM_VERSION",
+           "ipautil", "IPA_PYTHON_VERSION", "certdb", "get_ca_cert"]
 
 import sys
+import logging
 
-# HACK: workaround for Ansible 2.9
-# https://github.com/ansible/ansible/issues/68361
-if 'ansible.executor' in sys.modules:
-    for attr in __all__:
-        setattr(sys.modules[__name__], attr, None)
+# Import getargspec from inspect or provide own getargspec for
+# Python 2 compatibility with Python 3.11+.
+try:
+    from inspect import getargspec
+except ImportError:
+    from collections import namedtuple
+    from inspect import getfullargspec
 
-else:
+    # The code is copied from Python 3.10 inspect.py
+    # Authors: Ka-Ping Yee <ping@lfw.org>
+    #          Yury Selivanov <yselivanov@sprymix.com>
+    ArgSpec = namedtuple('ArgSpec', 'args varargs keywords defaults')
+
+    def getargspec(func):
+        args, varargs, varkw, defaults, kwonlyargs, _kwonlydefaults, \
+            ann = getfullargspec(func)
+        if kwonlyargs or ann:
+            raise ValueError(
+                "Function has keyword-only parameters or annotations"
+                ", use inspect.signature() API which can support them")
+        return ArgSpec(args, varargs, varkw, defaults)
+
+
+# pylint: disable=invalid-name,useless-object-inheritance
+class installer_obj(object):
+    def __init__(self):
+        pass
+
+    # pylint: disable=attribute-defined-outside-init
+    def set_logger(self, _logger):
+        self.logger = _logger
+
+    # def __getattribute__(self, attr):
+    #    value = super(installer_obj, self).__getattribute__(attr)
+    #    if not attr.startswith("--") and not attr.endswith("--"):
+    #        logger.debug(
+    #            "  <-- Accessing installer.%s (%s)" % (attr, repr(value)))
+    #    return value
+
+    # def __getattr__(self, attr):
+    #    # logger.info("  --> ADDING missing installer.%s" % attr)
+    #    self.logger.warn("  --> ADDING missing installer.%s" % attr)
+    #    setattr(self, attr, None)
+    #    return getattr(self, attr)
+
+    # def __setattr__(self, attr, value):
+    #    logger.debug("  --> Setting installer.%s to %s" %
+    #                 (attr, repr(value)))
+    #    return super(installer_obj, self).__setattr__(attr, value)
+
+    def knobs(self):
+        for name in self.__dict__:
+            yield self, name
+
+
+# Initialize installer settings
+installer = installer_obj()
+# Create options
+options = installer
+# pylint: disable=attribute-defined-outside-init
+options.interactive = False
+options.unattended = not options.interactive
+
+
+ANSIBLE_IPA_CLIENT_IMPORT_ERROR = None
+try:
     from ipapython.version import NUM_VERSION, VERSION
 
     if NUM_VERSION < 30201:
@@ -67,73 +128,10 @@ else:
     else:
         IPA_PYTHON_VERSION = NUM_VERSION
 
-    # pylint: disable=invalid-name,useless-object-inheritance
-    class installer_obj(object):
-        def __init__(self):
-            pass
-
-        # pylint: disable=attribute-defined-outside-init
-        def set_logger(self, _logger):
-            self.logger = _logger
-
-        # def __getattribute__(self, attr):
-        #    value = super(installer_obj, self).__getattribute__(attr)
-        #    if not attr.startswith("--") and not attr.endswith("--"):
-        #        logger.debug(
-        #            "  <-- Accessing installer.%s (%s)" % (attr, repr(value)))
-        #    return value
-
-        # def __getattr__(self, attr):
-        #    # logger.info("  --> ADDING missing installer.%s" % attr)
-        #    self.logger.warn("  --> ADDING missing installer.%s" % attr)
-        #    setattr(self, attr, None)
-        #    return getattr(self, attr)
-
-        # def __setattr__(self, attr, value):
-        #    logger.debug("  --> Setting installer.%s to %s" %
-        #                 (attr, repr(value)))
-        #    return super(installer_obj, self).__setattr__(attr, value)
-
-        def knobs(self):
-            for name in self.__dict__:
-                yield self, name
-
-    # Initialize installer settings
-    installer = installer_obj()
-    # Create options
-    options = installer
-    # pylint: disable=attribute-defined-outside-init
-    options.interactive = False
-    options.unattended = not options.interactive
-
     if NUM_VERSION >= 40400:
         # IPA version >= 4.4
 
-        # import sys
         import gssapi
-        import logging
-
-        # Import getargspec from inspect or provide own getargspec for
-        # Python 2 compatibility with Python 3.11+.
-        try:
-            from inspect import getargspec
-        except ImportError:
-            from collections import namedtuple
-            from inspect import getfullargspec
-
-            # The code is copied from Python 3.10 inspect.py
-            # Authors: Ka-Ping Yee <ping@lfw.org>
-            #          Yury Selivanov <yselivanov@sprymix.com>
-            ArgSpec = namedtuple('ArgSpec', 'args varargs keywords defaults')
-
-            def getargspec(func):
-                args, varargs, varkw, defaults, kwonlyargs, _kwonlydefaults, \
-                    ann = getfullargspec(func)
-                if kwonlyargs or ann:
-                    raise ValueError(
-                        "Function has keyword-only parameters or annotations"
-                        ", use inspect.signature() API which can support them")
-                return ArgSpec(args, varargs, varkw, defaults)
 
         from ipapython import version
         try:
@@ -303,14 +301,19 @@ else:
             from ipaclient.install.client import sssd_enable_ifp
         except ImportError:
             sssd_enable_ifp = None
-
-        logger = logging.getLogger("ipa-client-install")
-        root_logger = logger
-
     else:
         # IPA version < 4.4
 
         raise Exception("freeipa version '%s' is too old" % VERSION)
+
+except ImportError as _err:
+    ANSIBLE_IPA_CLIENT_IMPORT_ERROR = str(_err)
+
+    for attr in __all__:
+        setattr(sys.modules[__name__], attr, None)
+
+logger = logging.getLogger("ipa-client-install")
+root_logger = logger
 
 
 def setup_logging():
