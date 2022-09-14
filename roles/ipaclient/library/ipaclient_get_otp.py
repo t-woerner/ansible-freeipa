@@ -128,9 +128,14 @@ import os
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils import six
 
-from ipalib import api, errors
-from ipaplatform.paths import paths
-from ipapython.ipautil import run
+MODULE_IMPORT_ERROR = None
+try:
+    from ipalib import api, errors
+    from ipaplatform.paths import paths
+    from ipapython.ipautil import run
+except ImportError as _err:
+    MODULE_IMPORT_ERROR = str(_err)
+    api = errors = paths = run = None
 
 if six.PY3:
     unicode = str
@@ -291,6 +296,9 @@ def main():
     ccache = module.params.get('ccache')
     fqdn = unicode(module.params.get('fqdn'))
     state = module.params.get('state')
+
+    if MODULE_IMPORT_ERROR is not None:
+        module.fail_json(msg=MODULE_IMPORT_ERROR)
 
     try:
         os.environ['KRB5CCNAME'] = ccache
