@@ -201,7 +201,7 @@ options:
       Start value of the secondary range for mapping UIDs and GIDs to RIDs
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

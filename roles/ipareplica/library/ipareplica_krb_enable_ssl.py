@@ -74,7 +74,7 @@ options:
     description: Directory Manager (master) password
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

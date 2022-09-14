@@ -61,7 +61,7 @@ options:
     choices: ["present", "absent", "enabled", "disabled", "reinitialized",
               "checked" ]
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 EXAMPLES = """

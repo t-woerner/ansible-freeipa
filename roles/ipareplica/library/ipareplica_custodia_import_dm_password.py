@@ -86,7 +86,7 @@ options:
     description: The config ca_host_name setting
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

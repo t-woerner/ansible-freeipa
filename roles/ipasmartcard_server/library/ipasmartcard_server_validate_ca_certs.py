@@ -43,7 +43,7 @@ options:
       files
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

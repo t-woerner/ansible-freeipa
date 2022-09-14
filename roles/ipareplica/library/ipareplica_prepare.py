@@ -186,7 +186,7 @@ options:
     description: Enable SID generation always
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

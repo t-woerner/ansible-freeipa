@@ -46,7 +46,7 @@ options:
     default: verified
     choices: ["verified"]
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 EXAMPLES = """

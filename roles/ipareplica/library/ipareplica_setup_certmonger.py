@@ -39,7 +39,7 @@ description:
   Setup certmonger
 options:
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

@@ -44,7 +44,7 @@ options:
     description: ntp server pool to use
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

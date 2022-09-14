@@ -120,7 +120,7 @@ options:
     required: yes
     type: dict
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

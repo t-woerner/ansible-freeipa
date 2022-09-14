@@ -41,7 +41,7 @@ options:
     description: Directory Manager password
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

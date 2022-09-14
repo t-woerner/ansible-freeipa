@@ -96,7 +96,7 @@ options:
     default: present
     choices: ["present", "absent", "enabled", "disabled"]
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 EXAMPLES = """

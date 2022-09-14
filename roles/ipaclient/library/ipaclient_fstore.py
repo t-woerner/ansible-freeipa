@@ -41,7 +41,7 @@ options:
     description: File to backup
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

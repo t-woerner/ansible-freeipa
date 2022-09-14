@@ -10,7 +10,7 @@ module: ipaclient_get_facts
 short_description: Get facts about IPA client and server configuration.
 description: Get facts about IPA client and server configuration.
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 import os

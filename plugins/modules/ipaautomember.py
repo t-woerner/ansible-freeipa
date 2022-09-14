@@ -104,7 +104,7 @@ options:
 author:
     - Mark Hahl
     - Jake Reynolds
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 EXAMPLES = """

@@ -38,7 +38,7 @@ description:
   Get IPA_BACKUP_DIR from ipaplatform
 options:
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

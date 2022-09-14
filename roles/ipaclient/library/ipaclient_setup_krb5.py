@@ -66,7 +66,7 @@ options:
     description: Installer force parameter
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

@@ -50,7 +50,7 @@ options:
       the host entry will not be changed on the server
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

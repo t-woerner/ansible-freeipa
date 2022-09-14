@@ -59,7 +59,7 @@ options:
     description: Repeat the request for host Kerberos ticket X times
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

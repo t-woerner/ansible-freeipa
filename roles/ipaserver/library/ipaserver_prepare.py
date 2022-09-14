@@ -148,7 +148,7 @@ options:
     description: The installer _hostname_overridden setting
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

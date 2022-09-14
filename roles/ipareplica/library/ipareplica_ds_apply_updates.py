@@ -88,7 +88,7 @@ options:
     description: The ds.ca_subject setting
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

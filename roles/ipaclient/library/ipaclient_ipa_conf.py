@@ -54,7 +54,7 @@ options:
     description: The basedn of the IPA server (of the form dc=example,dc=com)
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

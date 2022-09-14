@@ -111,7 +111,7 @@ options:
     description: The installer _pkinit_pkcs12_info setting
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

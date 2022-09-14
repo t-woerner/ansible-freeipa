@@ -50,7 +50,7 @@ options:
     description: Turn on extra debugging
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

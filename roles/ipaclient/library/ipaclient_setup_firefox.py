@@ -47,7 +47,7 @@ options:
       '/usr/lib/firefox')
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

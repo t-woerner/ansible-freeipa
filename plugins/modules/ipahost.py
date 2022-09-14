@@ -336,7 +336,7 @@ options:
     choices: ["present", "absent",
               "disabled"]
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 EXAMPLES = """

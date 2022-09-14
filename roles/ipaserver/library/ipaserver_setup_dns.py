@@ -74,7 +74,7 @@ options:
     description: The dns reverse_zones setting
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

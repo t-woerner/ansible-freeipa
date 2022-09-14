@@ -56,7 +56,7 @@ options:
     description: Path to ini file with config overrides
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

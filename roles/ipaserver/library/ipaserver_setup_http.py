@@ -139,7 +139,7 @@ options:
     description: The installer _http_pkcs12_info setting
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

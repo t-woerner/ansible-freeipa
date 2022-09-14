@@ -63,7 +63,7 @@ options:
     description: The adtrust reset_netbios_name setting
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

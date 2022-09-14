@@ -42,7 +42,7 @@ options:
     description: Fully qualified name of this host
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

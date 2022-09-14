@@ -86,7 +86,7 @@ options:
       Configure SSSD not to store user password when the server is offline
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

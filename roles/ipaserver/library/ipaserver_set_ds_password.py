@@ -96,7 +96,7 @@ options:
     description: The domain level
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

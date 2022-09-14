@@ -104,7 +104,7 @@ options:
     description: The config ips setting
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

@@ -54,7 +54,7 @@ options:
     description: The installer sssd setting
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

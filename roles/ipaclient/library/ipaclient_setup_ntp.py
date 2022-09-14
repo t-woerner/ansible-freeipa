@@ -57,7 +57,7 @@ options:
     description: Primary DNS domain of the IPA deployment
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

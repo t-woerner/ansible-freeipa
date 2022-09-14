@@ -48,7 +48,7 @@ options:
     description: The automount location
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

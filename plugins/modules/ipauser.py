@@ -395,7 +395,7 @@ options:
               "enabled", "disabled",
               "unlocked", "undeleted"]
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 """
 
 EXAMPLES = """

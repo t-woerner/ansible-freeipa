@@ -54,7 +54,7 @@ options:
     description: The installer _top_dir setting
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

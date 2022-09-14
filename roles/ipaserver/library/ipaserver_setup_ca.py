@@ -151,7 +151,7 @@ options:
     description: The installer _http_ca_cert setting
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

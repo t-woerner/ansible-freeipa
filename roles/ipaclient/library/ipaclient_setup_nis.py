@@ -45,7 +45,7 @@ options:
     description: The NIS domain name
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

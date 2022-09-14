@@ -93,7 +93,7 @@ options:
     description: Configure a dogtag CA
     required: yes
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

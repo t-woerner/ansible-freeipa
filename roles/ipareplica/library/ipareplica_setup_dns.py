@@ -80,7 +80,7 @@ options:
     description: The config master_host_name setting
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''

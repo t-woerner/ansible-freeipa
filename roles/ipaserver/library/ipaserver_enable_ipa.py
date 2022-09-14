@@ -47,7 +47,7 @@ options:
     description: Configure a dogtag CA
     required: no
 author:
-    - Thomas Woerner
+    - Thomas Woerner (@t-woerner)
 '''
 
 EXAMPLES = '''
