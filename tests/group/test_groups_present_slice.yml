@@ -1,0 +1,31 @@
+---
+- name: Include create_groups_json.yml
+  ansible.builtin.import_playbook: create_groups_json.yml
+
+- name: Test groups present slice
+  hosts: ipaserver
+  become: true
+  gather_facts: false
+
+  vars:
+    slice_size: 500
+  tasks:
+  - name: Include groups.json
+    ansible.builtin.include_vars:
+      file: groups.json  # noqa 505
+  - name: Size of groups slice.
+    ansible.builtin.debug:
+      msg: "{{ group_list | length }}"
+  - name: Groups present
+    ipagroup:
+      ipaadmin_password: SomeADMINpassword
+      groups: "{{ group_list[item : item + slice_size] }}"
+    loop: "{{ range(0, group_list | length, slice_size) | list }}"
+
+- name: Remove groups.json
+  hosts: localhost
+  tasks:
+  - name: Remove groups.json
+    ansible.builtin.file:
+      state: absent
+      path: groups.json

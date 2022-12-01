@@ -1,0 +1,26 @@
+---
+- name: Include create_groups_json.yml
+  ansible.builtin.import_playbook: create_groups_json.yml
+
+- name: Test groups present
+  hosts: ipaserver
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: Include groups.json
+    ansible.builtin.include_vars:
+      file: groups.json  # noqa 505
+
+  - name: Groups present len:{{ group_list | length }}
+    ipagroup:
+      ipaadmin_password: SomeADMINpassword
+      groups: "{{ group_list }}"
+
+- name: Remove groups.json
+  hosts: localhost
+  tasks:
+  - name: Remove groups.json
+    ansible.builtin.file:
+      state: absent
+      path: groups.json

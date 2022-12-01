@@ -71,6 +71,65 @@ Example playbook to add groups:
       name: appops
 ```
 
+These three `ipagroup` module calls can be combined into one with the `groups` variable:
+
+```yaml
+---
+- name: Playbook to handle groups
+  hosts: ipaserver
+  become: true
+
+  tasks:
+  # Ensure groups ops, sysops and appops are present
+  - ipagroup:
+      ipaadmin_password: SomeADMINpassword
+      groups:
+      - name: ops
+        gidnumber: 1234
+      - name: sysops
+        user:
+        - pinky
+      - name: appops
+```
+
+You can also alternatively use a json file containing the groups, here `groups_present.json`:
+
+```json
+{
+  "groups": [
+    {
+      "name": "group1",
+      "description": "description group1"
+    },
+    {
+      "name": "group2",
+      "description": "description group2"
+    },
+    ...
+  ]
+}
+```
+
+And ensure the presence of the groups with this example playbook:
+
+```yaml
+---
+- name: Tests
+  hosts: ipaserver
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: Include groups_present.json
+    include_vars:
+      file: groups_present.json
+
+  - name: Groups present
+    ipagroup:
+      ipaadmin_password: SomeADMINpassword
+      groups: "{{ groups }}"
+```
+
 Example playbook to add users to a group:
 
 ```yaml
@@ -112,11 +171,12 @@ Example playbook to add group members to a group:
 Example playbook to add members from a trusted realm to an external group:
 
 ```yaml
---
+---
 - name: Playbook to handle groups.
   hosts: ipaserver
-  became: true
-
+  become: true
+  
+  tasks:
   - name: Create an external group and add members from a trust to it.
     ipagroup:
       ipaadmin_password: SomeADMINpassword
@@ -125,6 +185,25 @@ Example playbook to add members from a trusted realm to an external group:
       externalmember:
       - WINIPA\\Web Users
       - WINIPA\\Developers
+```
+
+Example playbook to add nonposix and external groups:
+
+```yaml
+---
+- name: Playbook to add nonposix and external groups
+  hosts: ipaserver
+  become: true
+
+  tasks:
+- name: Add nonposix group sysops and external group appops
+  ipagroup:
+    ipaadmin_password: SomeADMINpassword
+    groups:
+    - name: sysops
+      nonposix: yes
+    - name: appops
+      external: yes
 ```
 
 Example playbook to remove groups:
@@ -136,13 +215,30 @@ Example playbook to remove groups:
   become: true
 
   tasks:
-  # Remove goups sysops, appops and ops
+  # Remove groups sysops, appops and ops
   - ipagroup:
       ipaadmin_password: SomeADMINpassword
       name: sysops,appops,ops
       state: absent
 ```
 
+Example playbook to ensure groups are absent:
+
+```yaml
+---
+- name: Playbook to handle groups
+  hosts: ipaserver
+  become: true
+
+  tasks:
+  # Ensure groups ops and sysops are absent
+  - ipagroup:
+      ipaadmin_password: SomeADMINpassword
+      groups:
+      - name: ops
+      - name: sysops
+      state: absent
+```
 
 Variables
 =========
@@ -154,6 +250,8 @@ Variable | Description | Required
 `ipaapi_context` | The context in which the module will execute. Executing in a server context is preferred. If not provided context will be determined by the execution environment. Valid values are `server` and `client`. | no
 `ipaapi_ldap_cache` | Use LDAP cache for IPA connection. The bool setting defaults to yes. (bool) | no
 `name` \| `cn` | The list of group name strings. | no
+`groups` | The list of group dicts. Each `groups` dict entry can contain group variables.<br>There is one required option in the `groups` dict:| no
+&nbsp; | `name` - The group name string of the entry. | yes
 `description` | The group description string. | no
 `gid` \| `gidnumber` | The GID integer. | no
 `posix` | Create a non-POSIX group or change a non-POSIX to a posix group. `nonposix`, `posix` and `external` are mutually exclusive. (bool) | no
