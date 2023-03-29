@@ -314,6 +314,7 @@ from ansible.module_utils.ansible_freeipa_module import \
 from ansible.module_utils import six
 if six.PY3:
     unicode = str
+
 # Ensuring (adding) several groups with mixed types external, nonposix
 # and posix require to have a fix in IPA:
 # FreeIPA issue: https://pagure.io/freeipa/issue/9349
@@ -526,6 +527,7 @@ def main():
     if external is False:
         ansible_module.fail_json(
             msg="group can not be non-external")
+
 
     # Ensuring (adding) several groups with mixed types external, nonposix
     # and posix require to have a fix in IPA:

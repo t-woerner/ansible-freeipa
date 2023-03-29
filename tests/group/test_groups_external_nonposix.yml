@@ -13,6 +13,11 @@
         - nonposixgroup
         - posixgroup
         - fail_group
+        - group_1
+        - posix_group_1
+        - nonposix_group_1
+        - external_group_1
+        - external_group_2
         state: absent
 
     - name: Ensure test users testuser1, testuser2 and testuser3 are absent
@@ -327,12 +332,48 @@
       register: result
       failed_when: not result.failed or "parameters are mutually exclusive for group `fail_group`" not in result.msg
 
+    # GROUPS WITH MIXED TYPES
+
+    - name: Adding posix, nonposix and external groups in one batch
+      ipagroup:
+        ipaadmin_password: SomeADMINpassword
+        groups:
+          - name: posix_group_1
+            posix: yes
+          - name: nonposix_group_1
+            nonposix: yes
+          - name: external_group_1
+            external: yes
+      register: result
+      failed_when: not result.changed or result.failed
+
+    - name: Adding non-external and external groups in one batch
+      debugger: always
+      ipagroup:
+        ipaadmin_password: SomeADMINpassword
+        groups:
+          - name: non_external_group_2
+          - name: external_group_2
+            external: yes
+      register: result
+      failed_when: not result.changed or result.failed
+
     # CLEANUP
 
     - name: Remove testing groups.
       ipagroup:
         ipaadmin_password: SomeADMINpassword
-        name: extgroup,nonposixgroup,posixgroup,fail_group
+        name:
+          - extgroup
+          - nonposixgroup
+          - posixgroup
+          - fail_group
+          - group_1
+          - posix_group_1
+          - nonposix_group_1
+          - external_group_1
+          - external_group_2
+          - non_external_group_2
         state: absent
 
     - name: Ensure test users testuser1, testuser2 and testuser3 are absent
