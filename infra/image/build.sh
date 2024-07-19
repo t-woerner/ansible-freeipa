@@ -35,10 +35,6 @@ podman create --privileged --name "${name}" --hostname "${hostname}" \
        --replace "${scenario}"
 echo
 
-#echo "= Committing \"${quayname}:${scenario}-base\" ="
-#podman commit "${name}" "${quayname}:${scenario}-base"
-#echo
-
 echo "= Starting ${name} ="
 podman start "${name}"
 echo
